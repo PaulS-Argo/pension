@@ -53,8 +53,10 @@ class PensionUserInterface:
                 value=100,
                 step=1,
                 help="How long you want your pension to last. "
-                "If you retire at 60 and set 100, the calculator plans for 40 years."
+                "If you retire at 60 and set 100, the calculator plans for 40 years.",
+
             )
+            years_in_retirement = life_expectancy - retirement_age
 
             state_pension = st.slider(
                 label="State pension", key="state_pension", min_value=0, max_value=20000, value=11500, step=50, help=(
@@ -103,7 +105,8 @@ class PensionUserInterface:
                                  real_return,
                                  desired_income,
                                  state_pension,
-                                 withdrawal_rate)
+                                 withdrawal_rate,
+                                 years_in_retirement)
 
         output = self.submit(current_age, retirement_age,
                              withdrawal_rate, calculator)

@@ -3,12 +3,13 @@ import datetime
 import math
 
 
-class PensionHelpers():
-
+class PensionHelpers:
+    @staticmethod
     def monthly_rate_from_annual(real_annual_return: float) -> float:
         """Convert an annual real return to an equivalent monthly rate."""
         return (1.0 + real_annual_return) ** (1.0 / 12.0) - 1.0
 
+    @staticmethod
     def pmt(rate: float, nper: int, pv: float, fv: float = 0.0, when: int = 1) -> float:
         """
         Excel-like PMT.
@@ -22,24 +23,69 @@ class PensionHelpers():
         if rate == 0:
             return -(fv + pv) / nper
         adj = (1 + rate) if when == 1 else 1.0
-        return -(rate * (fv + pv * (1 + rate) ** nper)) / (adj * ((1 + rate) ** nper - 1))
+        return -(rate * (fv + pv * (1 + rate) ** nper)) / (
+            adj * ((1 + rate) ** nper - 1)
+        )
 
-    def sustainable_income(pot: float, withdrawal_rate: float, state_pension: float) -> float:
-        """Estimated sustainable income in real terms given pot + state pension."""
+    @staticmethod
+    def sustainable_income_with_lifespan(
+        pot: float,
+        years_in_retirement: int,
+        real_return: float,
+        state_pension: float,
+    ) -> float:
+        """
+        Sustainable annual income (real) given:
+        - pot at retirement,
+        - planned years in retirement,
+        - real return,
+        - plus State Pension.
+        """
+        r = real_return
+
+        if years_in_retirement <= 0:
+            # Degenerate case: treat as lump sum + state pension
+            return pot + state_pension
+
+        if r <= 0:
+            income_from_pot = pot / years_in_retirement
+        else:
+            # PV = PMT * (1 - (1 + r)^-n) / r  =>  PMT = PV * r / (1 - (1 + r)^-n)
+            income_from_pot = pot * r / (1 - (1 + r) ** (-years_in_retirement))
+
+        return income_from_pot + state_pension
+
+    @staticmethod
+    def sustainable_income(
+        pot: float,
+        withdrawal_rate: float,
+        state_pension: float,
+        years_in_retirement: int | None = None,
+        real_return: float = 0.035,
+    ) -> float:
+        if years_in_retirement is not None:
+            return PensionHelpers.sustainable_income_with_lifespan(
+                pot, years_in_retirement, real_return, state_pension
+            )
         return pot * withdrawal_rate + state_pension
 
     @staticmethod
-    def years_sustainable_fixed_income(pot, desired_income, state_pension, real_return):
+    def years_sustainable_fixed_income(
+        pot: float,
+        desired_income: float,
+        state_pension: float,
+        real_return: float,
+    ) -> float:
         """
-        Returns how many years the pot can sustain the desired income (real terms).
+        How many years can the pot sustain the desired income (real terms)?
 
-        - Income needed from pot each year = desired_income - state_pension
-        - Pot grows at `real_return` (e.g. 0.035 for 3.5%) in real terms.
-        - Withdrawals are inflation-adjusted, so this is all in real terms.
+        - Income needed from pot = desired_income - state_pension
+        - Pot grows at real_return (e.g. 0.035 = 3.5%) in real terms.
+        - Withdrawals are in real terms (inflation-adjusted).
         """
         annual_from_pot = desired_income - state_pension
 
-        # If state pension alone covers desired income
+        # State Pension alone covers target
         if annual_from_pot <= 0:
             return math.inf
 
@@ -48,25 +94,25 @@ class PensionHelpers():
 
         r = real_return
 
-        # No growth case: straight-line depletion
+        # No growth → straight-line depletion
         if r == 0:
             return pot / annual_from_pot
 
-        # If growth on pot already covers withdrawals => theoretically infinite
+        # Growth covers withdrawals → effectively sustainable
         if pot * r >= annual_from_pot:
             return math.inf
 
-        # Annuity depletion formula rearranged:
-        # pot = withdraw * (1 - (1 + r)^-n) / r
-        # => n = -ln(1 - r * pot / withdraw) / ln(1 + r)
+        # Annuity depletion:
+        # pot = W * (1 - (1 + r)^-n) / r
+        # => n = -ln(1 - r * pot / W) / ln(1 + r)
         x = 1 - r * pot / annual_from_pot
         if x <= 0:
-            # Numerical edge / already unsustainable
             return 0.0
 
         years = -math.log(x) / math.log(1 + r)
         return max(0.0, years)
 
+    @staticmethod
     def build_projection(
         current_age: int,
         retire_age: int,
@@ -77,7 +123,8 @@ class PensionHelpers():
     ) -> pd.DataFrame:
         """
         Build a year-by-year projection (real terms).
-        Growth approximation: apply annual growth to the average of start balance and contributions.
+        Growth approximation: apply annual growth to the average of
+        start balance and contributions.
         """
         years = retire_age - current_age
         annual_contrib = (monthly_personal + monthly_employer) * 12.0
@@ -88,6 +135,7 @@ class PensionHelpers():
         for y in range(years + 1):
             age = current_age + y
             year = this_year + y
+
             if y == 0:
                 contrib = 0.0
                 growth = 0.0
@@ -108,6 +156,7 @@ class PensionHelpers():
                     "End Balance (£)": round(end_balance, 2),
                 }
             )
+
             start_balance = end_balance
 
         return pd.DataFrame(rows)

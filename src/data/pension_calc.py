@@ -14,7 +14,7 @@ class PensionCalc():
     def __init__(self, current_age: int = 33, retire_age: int = 67, current_pot: float = 0.0,
                  p_monthly_contribution: float = 0.0, e_monthly_contribution: float = 0.0,
                  real_return: float = 0.035, desired_income: int = 50000, state_pension: int = 11500,
-                 withdrawal_rate: float = 0.04):
+                 withdrawal_rate: float = 0.04, years_in_retirement: int = 40):
 
         from src.data.helpers.pension_helpers import PensionHelpers
         self.helpers = PensionHelpers
@@ -28,6 +28,7 @@ class PensionCalc():
         self.desired_income = desired_income
         self.state_pension = state_pension
         self.withdrawal_rate = withdrawal_rate
+        self.years_in_retirement = years_in_retirement
 
     def run(self):
         # --- Build projection ---
@@ -45,7 +46,10 @@ class PensionCalc():
 
         # Income your pot can support at the chosen withdrawal rate
         projected_income = self.helpers.sustainable_income(
-            projected_pot, self.withdrawal_rate, self.state_pension
+            projected_pot,
+            self.withdrawal_rate,   # must be 0.04, not 4
+            self.state_pension,
+            self.years_in_retirement
         )
 
         # How long your *desired* income can be sustained (ignores WR slider)

@@ -14,7 +14,7 @@ class PensionCalc():
     def __init__(self, current_age: int = 33, retire_age: int = 67, current_pot: float = 0.0,
                  p_monthly_contribution: float = 0.0, e_monthly_contribution: float = 0.0,
                  real_return: float = 0.035, desired_income: int = 50000, state_pension: int = 11500,
-                 withdrawal_rate: float = 0.04, years_in_retirement: int = 40):
+                 years_in_retirement: int = 40):
 
         from src.data.helpers.pension_helpers import PensionHelpers
         self.helpers = PensionHelpers
@@ -27,7 +27,6 @@ class PensionCalc():
         self.annual_real_return = real_return
         self.desired_income = desired_income
         self.state_pension = state_pension
-        self.withdrawal_rate = withdrawal_rate
         self.years_in_retirement = years_in_retirement
 
     def run(self):
@@ -44,12 +43,12 @@ class PensionCalc():
         years = self.retire_age - self.current_age
         projected_pot = float(proj.iloc[-1]["End Balance (£)"])
 
-        # Income your pot can support at the chosen withdrawal rate
-        projected_income = self.helpers.sustainable_income(
+        # Income your pot can support
+        projected_income = self.helpers.sustainable_income_with_lifespan(
             projected_pot,
-            self.withdrawal_rate,   # must be 0.04, not 4
+            self.years_in_retirement,
+            self.annual_real_return,
             self.state_pension,
-            self.years_in_retirement
         )
 
         # How long your *desired* income can be sustained (ignores WR slider)
@@ -103,7 +102,6 @@ class PensionCalc():
 **Monthly employer contribution:** £{self.monthly_employer:,.0f}  
 
 **Expected real return:** {self.annual_real_return*100:.1f}% per year  
-**Planned withdrawal rate:** {self.withdrawal_rate*100:.1f}%  
 **Estimated State Pension:** £{self.state_pension:,.0f}/yr  
 
 **Projected pot at age {self.retire_age}:** £{projected_pot:,.0f}  
@@ -112,10 +110,11 @@ class PensionCalc():
 
 ### 💰 What your pot can support
 
-At a **{self.withdrawal_rate*100:.1f}%** withdrawal rate, your projected pot
-could support about:
+Your projected pot could support about:
 
 👉 **£{projected_income:,.0f}/yr** (including State Pension)
+
+ℹ️ **{PensionHelpers.lifestyle_summary(projected_income)}**
 
 ---
 

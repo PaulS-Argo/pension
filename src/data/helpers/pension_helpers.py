@@ -4,6 +4,29 @@ import math
 
 
 class PensionHelpers:
+
+    @staticmethod
+    def lifestyle_summary(income):
+        lifestyle_summary = None
+        if income < 20000:
+            lifestyle_summary = "Covers the basics — bills, groceries, and the occasional treat, but careful budgeting is essential."
+        elif income < 30999:
+            lifestyle_summary = "A modest, comfortable lifestyle — a small car, UK holidays, eating out occasionally, but watching big spends."
+        elif income < 40999:
+            lifestyle_summary = "Comfortable living — a couple of holidays a year, nice meals out, little luxuries without stress."
+        elif income < 50999:
+            lifestyle_summary = "A good standard of living — foreign holidays, hobbies, treating family, and upgrading tech when you fancy."
+        elif income < 65999:
+            lifestyle_summary = "Upper-middle comfort — long-haul holidays, generous gifts, dining out often, and freedom from financial worry."
+        elif income < 80999:
+            lifestyle_summary = "Affluent lifestyle — high-end travel, premium car, regular leisure spending, and comfortable buffer savings."
+        elif income < 100000:
+            lifestyle_summary = "Luxury retirement — fine dining, extended travel, helping family financially, and no real money constraints."
+        else:
+            lifestyle_summary = "Financially independent — multiple properties, first-class travel, and freedom to live life entirely on your terms."
+
+        return lifestyle_summary
+
     @staticmethod
     def monthly_rate_from_annual(real_annual_return: float) -> float:
         """Convert an annual real return to an equivalent monthly rate."""
@@ -55,19 +78,19 @@ class PensionHelpers:
 
         return income_from_pot + state_pension
 
-    @staticmethod
-    def sustainable_income(
-        pot: float,
-        withdrawal_rate: float,
-        state_pension: float,
-        years_in_retirement: int | None = None,
-        real_return: float = 0.035,
-    ) -> float:
-        if years_in_retirement is not None:
-            return PensionHelpers.sustainable_income_with_lifespan(
-                pot, years_in_retirement, real_return, state_pension
-            )
-        return pot * withdrawal_rate + state_pension
+    # @staticmethod
+    # def sustainable_income(
+    #     pot: float,
+    #     state_pension: float,
+    #     years_in_retirement: int,
+    #     real_return: float = 0.035,
+    # ) -> float:
+
+    #     if years_in_retirement is not None:
+    #         return PensionHelpers.sustainable_income_with_lifespan(
+    #             pot, years_in_retirement, real_return, state_pension
+    #         )
+    #     return pot + state_pension
 
     @staticmethod
     def years_sustainable_fixed_income(
@@ -119,7 +142,7 @@ class PensionHelpers:
         current_balance: float,
         monthly_personal: float,
         monthly_employer: float,
-        annual_real_return: float,
+        annual_real_return: float
     ) -> pd.DataFrame:
         """
         Build a year-by-year projection (real terms).

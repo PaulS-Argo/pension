@@ -1,8 +1,9 @@
 import streamlit as st
 from src.data.pension_calc import PensionCalc
+from src.data.helpers.pension_helpers import PensionHelpers
 
 # Default values
-DEFAULT_CURRENT_AGE = 30
+DEFAULT_CURRENT_AGE = 42
 DEFAULT_RETIRE_AGE = 67
 
 
@@ -15,24 +16,31 @@ st.title('Pension Pot Calculator')
 
 class PensionUserInterface:
     def __init__(self):
+        self.helpers = PensionHelpers
         self.default_current_age = DEFAULT_CURRENT_AGE
         self.default_retire_age = DEFAULT_RETIRE_AGE
         self.monthly_personal = 0
         self.monthly_employer = 0
 
-    def submit(self, current_age, retirement_age, withdrawal_rate, calculator):
+    def withdrawal_warning(self, withdrawal_rate):
+        '''
+        Currently unused, will be handy if we reintroduce the withdrawal rate slider
+        '''
+        if withdrawal_rate < 0.03:
+            return st.info("You're planning a very cautious withdrawal rate (<3%). "
+                           "Good for longevity, but may require a larger pension pot.")
+
+        if withdrawal_rate > 0.05:
+            return st.warning("You're planning a high withdrawal rate (>5%). "
+                              "This may deplete your pot early unless returns are strong or you plan a shorter retirement.")
+
+    def submit(self, current_age, retirement_age, calculator):
         if current_age >= retirement_age:
             st.warning("Retirement age must be greater than current age.")
             self.current_age = self.default_current_age
             self.retirement_age = self.default_retire_age
+            return
 
-        if withdrawal_rate < 0.03:
-            st.info("You're planning a very cautious withdrawal rate (<3%). "
-                    "Good for longevity, but may require a larger pension pot.")
-
-        if withdrawal_rate > 0.05:
-            st.warning("You're planning a high withdrawal rate (>5%). "
-                       "This may deplete your pot early unless returns are strong or you plan a shorter retirement.")
         return calculator.run()
 
     def user_interface(self):
@@ -53,15 +61,15 @@ class PensionUserInterface:
                 contribution_toggle = st.toggle(label="% of Salary")
                 if contribution_toggle:
                     annual_salary = st.number_input(
-                        label="Annual Salary", step=500, min_value=18000, max_value=500000, value=30000, key="salary")
+                        label="Annual Salary", step=500, min_value=18000, max_value=500000, value=37430, key="salary")
                     p_monthly_percentage = st.number_input(
                         label="Personal % Monthly Contribution",
                         help="This is the percentage of your salary you've opted to put into your pension",
-                        min_value=1, max_value=99, key="personal_percentage")
+                        min_value=1, max_value=99, value=4, key="personal_percentage")
                     e_monthly_percentage = st.number_input(
                         label="Employer % Monthly Contribution",
                         help="This is the percentage of your salary your employer pays into your pension",
-                        min_value=1, max_value=99, key="employer_percentage")
+                        min_value=1, max_value=99, value=4, key="employer_percentage")
                     self.monthly_personal = annual_salary * \
                         (p_monthly_percentage/100)/12
                     self.monthly_employer = annual_salary * \
@@ -102,23 +110,30 @@ class PensionUserInterface:
                         "Use your State Pension forecast at https://www.gov.uk/check-state-pension "
                         "for a personalised estimate."
                     ))
-                withdrawal_rate = (
-                    st.slider(
-                        "Planned withdrawal rate (% of pot per year)",
-                        min_value=2.0,
-                        max_value=6.0,
-                        value=4.0,
-                        step=0.25,
-                        key="withdrawal_rate",
-                        help=(
-                            "This controls how much income your pot can safely support.\n"
-                            "Example: at 4%, every £100,000 of pension pot gives you £4,000/year.\n"
-                            "We use this rate together with your desired income and State Pension "
-                            "to calculate the pot you need."
-                        ),
-                    )
-                    / 100
-                )
+
+                # # Commented out for later consideration. This is adding more complication to the calculator.
+                # # in its current state, the WR should be derived from the other inputs.
+                # # later I may consider some 'Advanced' options for ultra tweaking.
+                # withdrawal_rate = (
+                #     st.slider(
+                #         "Planned withdrawal rate (% of pot per year)",
+                #         min_value=2.0,
+                #         max_value=6.0,
+                #         value=4.0,
+                #         step=0.25,
+                #         key="withdrawal_rate",
+                #         help=(
+                #             "This controls how much income your pot can safely support.\n"
+                #             "Example: at 4%, every £100,000 of pension pot gives you £4,000/year.\n"
+                #             "We use this rate together with your desired income and State Pension "
+                #             "to calculate the pot you need."
+                #         ),
+                #     )
+                #     / 100
+
+                # )
+
+                # self.withdrawal_warning(withdrawal_rate)
                 real_return = (st.slider(
                     "Expected real annual return (after inflation) %",
                     min_value=0.0,
@@ -131,7 +146,9 @@ class PensionUserInterface:
                         "Higher = more optimistic/stock-heavy; lower = conservative."
                     ),
                 ))/100
+            PensionHelpers.lifestyle_summary(desired_income)
 
+        # TODO: REFACTOR REQUIRED TO PROPERLY INSTANTIATE THE PENSION CALC IN INIT WITH ARGS
         calculator = PensionCalc(current_age,
                                  retirement_age,
                                  current_pot,
@@ -140,11 +157,10 @@ class PensionUserInterface:
                                  real_return,
                                  desired_income,
                                  state_pension,
-                                 withdrawal_rate,
                                  years_in_retirement)
 
         output = self.submit(current_age, retirement_age,
-                             withdrawal_rate, calculator)
+                             calculator)
         with results_expander:
             st.markdown(output)
 

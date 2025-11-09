@@ -146,7 +146,7 @@ class PensionUserInterface:
                         "Higher = more optimistic/stock-heavy; lower = conservative."
                     ),
                 ))/100
-            PensionHelpers.lifestyle_summary(desired_income)
+            st.write(PensionHelpers.lifestyle_summary(desired_income))
 
         # TODO: REFACTOR REQUIRED TO PROPERLY INSTANTIATE THE PENSION CALC IN INIT WITH ARGS
         calculator = PensionCalc(current_age,
